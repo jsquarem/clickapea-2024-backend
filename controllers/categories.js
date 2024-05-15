@@ -1,11 +1,15 @@
-const Category = require('../models/category');
+const {
+  createCategory,
+  getCategories,
+  addRecipeToCategory,
+  getCategoryRecipes,
+} = require('../services/categoryService');
 
-const createCategory = async (req, res) => {
+const createCategoryHandler = async (req, res) => {
   const { name, user } = req.body;
 
   try {
-    const newCategory = new Category({ name, user });
-    await newCategory.save();
+    const newCategory = await createCategory(name, user);
     res.status(201).json(newCategory);
   } catch (error) {
     console.error('Error creating category:', error.message);
@@ -13,11 +17,11 @@ const createCategory = async (req, res) => {
   }
 };
 
-const getCategories = async (req, res) => {
+const getCategoriesHandler = async (req, res) => {
   const { userId } = req.query;
 
   try {
-    const categories = await Category.find({ user: userId });
+    const categories = await getCategories(userId);
     res.status(200).json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error.message);
@@ -25,19 +29,12 @@ const getCategories = async (req, res) => {
   }
 };
 
-const addRecipeToCategory = async (req, res) => {
-    const { categoryId } = req.params;
-    const { recipeId } = req.body;
-    console.log(recipeId, '<-recipeId');
-    console.log(categoryId, '<-categoryId');
+const addRecipeToCategoryHandler = async (req, res) => {
+  const { categoryId } = req.params;
+  const { recipeId } = req.body;
 
   try {
-    const category = await Category.findById(categoryId);
-    if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
-    }
-    category.recipes.push(recipeId);
-    await category.save();
+    const category = await addRecipeToCategory(categoryId, recipeId);
     res.status(200).json(category);
   } catch (error) {
     console.error('Error adding recipe to category:', error.message);
@@ -45,8 +42,21 @@ const addRecipeToCategory = async (req, res) => {
   }
 };
 
+const getCategoryRecipesHandler = async (req, res) => {
+  const { userId } = req.query;
+
+  try {
+    const categories = await getCategoryRecipes(userId);
+    res.status(200).json({ categories });
+  } catch (error) {
+    console.error('Error fetching category recipes:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
-  createCategory,
-  getCategories,
-  addRecipeToCategory,
+  createCategoryHandler,
+  getCategoriesHandler,
+  addRecipeToCategoryHandler,
+  getCategoryRecipesHandler,
 };

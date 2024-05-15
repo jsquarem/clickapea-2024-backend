@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const Category = require('../models/category');
+const Category = require('../models/Category');
 
 const addUser = async (req, res) => {
   const { googleId, email, name, picture } = req.body;
