@@ -3,6 +3,10 @@ const {
   getCategories,
   addRecipeToCategory,
   getCategoryRecipes,
+  reorderCategories,
+  reorderRecipesInCategory,
+  moveRecipeToCategory,
+  deleteCategory
 } = require('../services/categoryService');
 
 const createCategoryHandler = async (req, res) => {
@@ -54,9 +58,65 @@ const getCategoryRecipesHandler = async (req, res) => {
   }
 };
 
+const reorderCategoriesHandler = async (req, res) => {
+  const { userId, newOrder } = req.body;
+
+  try {
+    console.log('Reorder categories request received:', userId, newOrder);
+    await reorderCategories(userId, newOrder);
+    res.status(200).json({ message: 'Categories reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering categories:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const reorderRecipesInCategoryHandler = async (req, res) => {
+  const { categoryId, newOrder } = req.body;
+
+  try {
+    console.log('Reorder recipes in category request received:', categoryId, newOrder);
+    await reorderRecipesInCategory(categoryId, newOrder);
+    res.status(200).json({ message: 'Recipes reordered successfully' });
+  } catch (error) {
+    console.error('Error reordering recipes:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const moveRecipeToCategoryHandler = async (req, res) => {
+  const { sourceCategoryId, destCategoryId, recipeId } = req.body;
+
+  try {
+    console.log('Move recipe request received:', sourceCategoryId, destCategoryId, recipeId);
+    await moveRecipeToCategory(sourceCategoryId, destCategoryId, recipeId);
+    res.status(200).json({ message: 'Recipe moved successfully' });
+  } catch (error) {
+    console.error('Error moving recipe:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const deleteCategoryHandler = async (req, res) => {
+  const { categoryId } = req.params;
+  const { userId } = req.body;
+
+  try {
+    await deleteCategory(categoryId, userId);
+    res.status(200).json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting category:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createCategoryHandler,
   getCategoriesHandler,
   addRecipeToCategoryHandler,
   getCategoryRecipesHandler,
+  reorderCategoriesHandler,
+  reorderRecipesInCategoryHandler,
+  moveRecipeToCategoryHandler,
+  deleteCategoryHandler
 };

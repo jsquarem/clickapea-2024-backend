@@ -14,6 +14,10 @@ const categorySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Recipe',
   }],
+  order: {
+    type: Number,
+    default: 0,
+  },
 });
 
 module.exports = mongoose.models.Category || mongoose.model('Category', categorySchema);
