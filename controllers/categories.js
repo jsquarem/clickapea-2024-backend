@@ -6,7 +6,8 @@ const {
   reorderCategories,
   reorderRecipesInCategory,
   moveRecipeToCategory,
-  deleteCategory
+  deleteCategory,
+  removeRecipeFromCategory
 } = require('../services/categoryService');
 
 const createCategoryHandler = async (req, res) => {
@@ -110,6 +111,20 @@ const deleteCategoryHandler = async (req, res) => {
   }
 };
 
+const removeRecipeFromCategoryHandler = async (req, res) => {
+  const { categoryId } = req.params;
+  const { recipeId } = req.body;
+
+  try {
+    const category = await removeRecipeFromCategory(categoryId, recipeId);
+    res.status(200).json(category);
+  } catch (error) {
+    console.error('Error removing recipe from category:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
 module.exports = {
   createCategoryHandler,
   getCategoriesHandler,
@@ -118,5 +133,6 @@ module.exports = {
   reorderCategoriesHandler,
   reorderRecipesInCategoryHandler,
   moveRecipeToCategoryHandler,
-  deleteCategoryHandler
+  deleteCategoryHandler,
+  removeRecipeFromCategoryHandler
 };

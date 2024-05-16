@@ -31,6 +31,28 @@ const processIngredients = (ingredients) => {
   });
 };
 
+const processIngredientsForUpdate = (ingredients) => {
+  return ingredients.map(ingredient => {
+    let metric = ingredient.metric;
+    let imperial = ingredient.imperial;
+    let other = ingredient.other;
+
+    if (!imperial && metric) {
+      imperial = convertToImperial(metric.quantity, metric.unit);
+    } else if (!metric && imperial) {
+      metric = convertToMetric(imperial.quantity, imperial.unit);
+    }
+
+    return {
+      ...ingredient,
+      metric,
+      imperial,
+      other
+    };
+  });
+};
+
 module.exports = {
   processIngredients,
+  processIngredientsForUpdate,
 };

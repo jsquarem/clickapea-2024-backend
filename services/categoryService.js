@@ -142,6 +142,16 @@ const deleteCategory = async (categoryId, userId) => {
   await category.remove();
 };
 
+const removeRecipeFromCategory = async (categoryId, recipeId) => {
+  const category = await Category.findById(categoryId);
+  if (!category) {
+    throw new Error('Category not found');
+  }
+  category.recipes = category.recipes.filter(id => id.toString() !== recipeId);
+  await category.save();
+  return category;
+};
+
 module.exports = {
   createCategory,
   getCategories,
@@ -150,5 +160,6 @@ module.exports = {
   reorderCategories,
   reorderRecipesInCategory,
   moveRecipeToCategory,
-  deleteCategory
+  deleteCategory,
+  removeRecipeFromCategory
 };

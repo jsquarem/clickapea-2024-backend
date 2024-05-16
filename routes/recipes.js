@@ -1,5 +1,5 @@
 const express = require('express');
-const { addRecipe, getRecipeById } = require('../controllers/recipes');
+const { addRecipe, getRecipeById, updateRecipeById } = require('../controllers/recipes');
 const router = express.Router();
 
 // Example route for fetching recipes
@@ -12,5 +12,8 @@ router.get('/:id', getRecipeById);
 
 // Route for adding a new recipe
 router.post('/add', addRecipe);
+
+// Route for updating a recipe by ID
+router.put('/:id', updateRecipeById);
 
 module.exports = router;

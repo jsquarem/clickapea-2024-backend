@@ -1,6 +1,10 @@
 const axios = require('axios');
-const { processIngredients } = require('./ingredientService');
+const { processIngredients, processIngredientsForUpdate } = require('./ingredientService');
 const Recipe = require('../models/Recipe');
+
+// Set mongoose options to avoid deprecation warnings
+const mongoose = require('mongoose');
+mongoose.set('useFindAndModify', false);
 
 const fetchAndProcessRecipe = async (url) => {
   try {
@@ -34,6 +38,25 @@ const fetchAndProcessRecipe = async (url) => {
   }
 };
 
+const updateRecipe = async (id, updatedRecipeData) => {
+  try {
+    const processedIngredients = processIngredientsForUpdate(updatedRecipeData.ingredients);
+    updatedRecipeData.ingredients = processedIngredients;
+
+    const updatedRecipe = await Recipe.findByIdAndUpdate(id, updatedRecipeData, { new: true });
+
+    if (!updatedRecipe) {
+      throw new Error('Recipe not found');
+    }
+
+    return updatedRecipe;
+  } catch (error) {
+    console.error('Error updating recipe:', error.message);
+    throw new Error('Failed to update recipe');
+  }
+};
+
 module.exports = {
   fetchAndProcessRecipe,
+  updateRecipe
 };
