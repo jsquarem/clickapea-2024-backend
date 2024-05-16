@@ -37,6 +37,16 @@ const processIngredientsForUpdate = (ingredients) => {
     let imperial = ingredient.imperial;
     let other = ingredient.other;
 
+    if (metric && typeof metric.quantity !== 'number') {
+      metric.quantity = parseFloat(metric.quantity);
+    }
+    if (imperial && typeof imperial.quantity !== 'number') {
+      imperial.quantity = parseFloat(imperial.quantity);
+    }
+    if (other && typeof other.quantity !== 'number') {
+      other.quantity = parseFloat(other.quantity);
+    }
+
     if (!imperial && metric) {
       imperial = convertToImperial(metric.quantity, metric.unit);
     } else if (!metric && imperial) {

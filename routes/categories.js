@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authenticateJWT = require('../middleware/authenticateJWT');
 const {
   createCategoryHandler,
   getCategoriesHandler,
@@ -12,21 +13,20 @@ const {
   removeRecipeFromCategoryHandler
 } = require('../controllers/categories');
 
-router.post('/', createCategoryHandler);
-router.get('/', getCategoriesHandler);
+router.post('/', authenticateJWT, createCategoryHandler);
+router.get('/', authenticateJWT, getCategoriesHandler);
 
-router.delete('/:categoryId', deleteCategoryHandler);
+router.delete('/:categoryId', authenticateJWT, deleteCategoryHandler);
 
-router.post('/:categoryId/recipes', addRecipeToCategoryHandler);
-router.delete('/:categoryId/recipes', removeRecipeFromCategoryHandler);
+router.post('/:categoryId/recipes', authenticateJWT, addRecipeToCategoryHandler);
+router.delete('/:categoryId/recipes', authenticateJWT, removeRecipeFromCategoryHandler);
 
-router.get('/recipes', getCategoryRecipesHandler);
+router.get('/recipes', authenticateJWT, getCategoryRecipesHandler);
 
-router.post('/reorder', reorderCategoriesHandler);
+router.post('/reorder', authenticateJWT, reorderCategoriesHandler);
 
-router.post('/reorder-recipes', reorderRecipesInCategoryHandler);
+router.post('/reorder-recipes', authenticateJWT, reorderRecipesInCategoryHandler);
 
-router.post('/move-recipe', moveRecipeToCategoryHandler);
-
+router.post('/move-recipe', authenticateJWT, moveRecipeToCategoryHandler);
 
 module.exports = router;

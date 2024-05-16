@@ -1,19 +1,12 @@
 const express = require('express');
 const { addRecipe, getRecipeById, updateRecipeById } = require('../controllers/recipes');
+const authenticateJWT = require('../middleware/authenticateJWT');
 const router = express.Router();
 
-// Example route for fetching recipes
-router.get('/', (req, res) => {
-  res.send('List of recipes');
-});
+router.get('/:id', authenticateJWT, getRecipeById);
+router.put('/:id', authenticateJWT, updateRecipeById);
 
-// Route for fetching a specific recipe by ID
-router.get('/:id', getRecipeById);
+router.post('/add', authenticateJWT, addRecipe);
 
-// Route for adding a new recipe
-router.post('/add', addRecipe);
-
-// Route for updating a recipe by ID
-router.put('/:id', updateRecipeById);
 
 module.exports = router;
