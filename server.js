@@ -5,10 +5,14 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-console.log('MONGODB_URI:', process.env.MONGODB_URI);
+// CORS configuration
+const corsOptions = {
+  origin: `${process.env.REACT_FRONTEND_URL}`, // Replace with your frontend URL
+  optionsSuccessStatus: 200,
+};
 
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Database connection
