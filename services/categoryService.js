@@ -1,3 +1,4 @@
+const UserRecipe = require('../models/UserRecipe');
 const Category = require('../models/Category');
 const Recipe = require('../models/Recipe');
 
@@ -17,14 +18,44 @@ const getCategories = async (userId) => {
   return categories;
 };
 
-const addRecipeToCategory = async (categoryId, recipeId) => {
+const addRecipeToCategory = async (categoryId, recipeId, userId) => {
   const category = await Category.findById(categoryId);
   if (!category) {
     throw new Error('Category not found');
   }
-  category.recipes.push(recipeId);
+
+  let userRecipe = await UserRecipe.findOne({ user_id: userId, recipe_id: recipeId });
+
+  if (!userRecipe) {
+    const recipe = await Recipe.findById(recipeId);
+    if (!recipe) {
+      throw new Error('Recipe not found');
+    }
+
+    userRecipe = new UserRecipe({
+      user_id: userId,
+      recipe_id: recipe._id,
+      title: recipe.title,
+      author: recipe.author,
+      equipment: recipe.equipment,
+      host: recipe.host,
+      total_time: recipe.total_time,
+      yields: recipe.yields,
+      ingredients: recipe.ingredients,
+      instructions: recipe.instructions,
+      nutrients: recipe.nutrients,
+      image: recipe.image,
+      url: recipe.url,
+      is_edited: false
+    });
+
+    await userRecipe.save();
+  }
+
+  category.recipes.push(userRecipe._id);
   await category.save();
-  return category;
+
+  return { category, userRecipeId: userRecipe._id };
 };
 
 const getCategoryRecipes = async (userId) => {
