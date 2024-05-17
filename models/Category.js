@@ -12,7 +12,7 @@ const categorySchema = new mongoose.Schema({
   },
   recipes: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Recipe',
+    ref: 'UserRecipe',
   }],
   order: {
     type: Number,

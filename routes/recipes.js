@@ -1,12 +1,22 @@
 const express = require('express');
-const { addRecipe, getRecipeById, updateRecipeById } = require('../controllers/recipes');
+const {
+  addRecipe,
+  getRecipeById,
+  addUserRecipe,
+  getUserRecipeById,
+  updateUserRecipeById,
+  getAllRecipes
+} = require('../controllers/recipes');
 const authenticateJWT = require('../middleware/authenticateJWT');
 const router = express.Router();
 
-router.get('/:id', authenticateJWT, getRecipeById);
-router.put('/:id', authenticateJWT, updateRecipeById);
+router.get('/all', getAllRecipes);
+router.post('/add', addRecipe);
 
-router.post('/add', authenticateJWT, addRecipe);
+router.get('/:id', getRecipeById);
 
+router.post('/user/add', authenticateJWT, addUserRecipe);
+router.get('/user/:id', authenticateJWT, getUserRecipeById);
+router.put('/user/:id', authenticateJWT, updateUserRecipeById);
 
 module.exports = router;

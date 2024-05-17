@@ -11,10 +11,11 @@ const {
 } = require('../services/categoryService');
 
 const createCategoryHandler = async (req, res) => {
-  const { name, user } = req.body;
+  const { name } = req.body;
+  const userId = req.user.userId;
 
   try {
-    const newCategory = await createCategory(name, user);
+    const newCategory = await createCategory(name, userId);
     res.status(201).json(newCategory);
   } catch (error) {
     console.error('Error creating category:', error.message);
@@ -23,10 +24,12 @@ const createCategoryHandler = async (req, res) => {
 };
 
 const getCategoriesHandler = async (req, res) => {
-  const { userId } = req.query;
+  const userId = req.user.userId;
+  console.log(`Fetching categories for user: ${userId}`);
 
   try {
     const categories = await getCategories(userId);
+    console.log(`Categories fetched: ${JSON.stringify(categories)}`);
     res.status(200).json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error.message);
@@ -37,10 +40,11 @@ const getCategoriesHandler = async (req, res) => {
 const addRecipeToCategoryHandler = async (req, res) => {
   const { categoryId } = req.params;
   const { recipeId } = req.body;
+  const userId = req.user.userId;
 
   try {
-    const category = await addRecipeToCategory(categoryId, recipeId);
-    res.status(200).json(category);
+    const { category, userRecipeId } = await addRecipeToCategory(categoryId, recipeId, userId);
+    res.status(200).json({ category, userRecipeId });
   } catch (error) {
     console.error('Error adding recipe to category:', error.message);
     res.status(500).json({ message: 'Server error' });
@@ -48,7 +52,7 @@ const addRecipeToCategoryHandler = async (req, res) => {
 };
 
 const getCategoryRecipesHandler = async (req, res) => {
-  const { userId } = req.query;
+  const userId = req.user.userId;
 
   try {
     const categories = await getCategoryRecipes(userId);
@@ -60,7 +64,8 @@ const getCategoryRecipesHandler = async (req, res) => {
 };
 
 const reorderCategoriesHandler = async (req, res) => {
-  const { userId, newOrder } = req.body;
+  const { newOrder } = req.body;
+  const userId = req.user.userId;
 
   try {
     console.log('Reorder categories request received:', userId, newOrder);
@@ -100,7 +105,7 @@ const moveRecipeToCategoryHandler = async (req, res) => {
 
 const deleteCategoryHandler = async (req, res) => {
   const { categoryId } = req.params;
-  const { userId } = req.body;
+  const userId = req.user.userId;
 
   try {
     await deleteCategory(categoryId, userId);
@@ -123,7 +128,6 @@ const removeRecipeFromCategoryHandler = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 module.exports = {
   createCategoryHandler,
