@@ -1,4 +1,4 @@
-const { fetchAndProcessRecipe, updateUserRecipe } = require('../services/recipeService');
+const { createRecipe, updateUserRecipe } = require('../services/recipeService');
 const Recipe = require('../models/Recipe');
 const UserRecipe = require('../models/UserRecipe');
 
@@ -6,8 +6,8 @@ const addRecipe = async (req, res) => {
   const { url } = req.body;
 
   try {
-    const recipeData = await fetchAndProcessRecipe(url);
-    res.status(200).json(recipeData);
+    const recipe = await createRecipe(url);
+    res.status(200).json(recipe);
   } catch (error) {
     console.error('Error adding recipe:', error.response ? error.response.data : error.message);
     res.status(500).json({ message: 'Server error' });
@@ -92,7 +92,6 @@ const getAllRecipes = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 
 module.exports = {
   addRecipe,
