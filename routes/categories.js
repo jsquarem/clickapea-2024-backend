@@ -10,7 +10,7 @@ const {
   reorderRecipesInCategoryHandler,
   moveRecipeToCategoryHandler,
   deleteCategoryHandler,
-  removeRecipeFromCategoryHandler
+  removeRecipeFromCategoryHandler,
 } = require('../controllers/categories');
 
 router.post('/', authenticateJWT, createCategoryHandler);

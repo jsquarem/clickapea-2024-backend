@@ -22,6 +22,13 @@ const loginUser = async (req, res) => {
 
       const allRecipesCategory = new Category({ name: 'All Recipes', user: user._id });
       await allRecipesCategory.save();
+    } else {
+      // Ensure "All Recipes" category exists for existing users
+      const allRecipesCategory = await Category.findOne({ user: user._id, name: 'All Recipes' });
+      if (!allRecipesCategory) {
+        const newAllRecipesCategory = new Category({ name: 'All Recipes', user: user._id });
+        await newAllRecipesCategory.save();
+      }
     }
 
     // Generate a JWT token

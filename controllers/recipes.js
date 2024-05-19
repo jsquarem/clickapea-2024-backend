@@ -1,6 +1,7 @@
 const { createRecipe, updateUserRecipe, uploadImageToS3 } = require('../services/recipeService');
 const Recipe = require('../models/Recipe');
 const UserRecipe = require('../models/UserRecipe');
+const Category = require('../models/Category'); // Import Category model
 const multer = require('multer');
 
 const storage = multer.memoryStorage();
@@ -49,6 +50,13 @@ const addUserRecipe = async (req, res) => {
       ...recipe.toObject(),
     });
     await userRecipe.save();
+
+    const allRecipesCategory = await Category.findOne({ user: user_id, name: 'All Recipes' });
+    if (allRecipesCategory) {
+      allRecipesCategory.recipes.push(userRecipe._id);
+      await allRecipesCategory.save();
+    }
+
     res.status(200).json(userRecipe);
   } catch (error) {
     console.error('Error adding user recipe:', error.message);
@@ -99,15 +107,48 @@ const handleUploadAdditionalImage = async (req, res) => {
   }
 
   try {
-    const userRecipe = await UserRecipe.findOne({ _id: id, user_id });
+    let userRecipe = await UserRecipe.findOne({ _id: id, user_id });
     if (!userRecipe) {
-      return res.status(404).json({ message: 'User recipe not found' });
+      const recipe = await Recipe.findById(id);
+      if (!recipe) {
+        return res.status(404).json({ message: 'Recipe not found' });
+      }
+
+      userRecipe = new UserRecipe({
+        user_id: user_id,
+        recipe_id: recipe._id,
+        title: recipe.title,
+        author: recipe.author,
+        equipment: recipe.equipment,
+        host: recipe.host,
+        total_time: recipe.total_time,
+        yields: recipe.yields,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        nutrients: recipe.nutrients,
+        image: recipe.image,
+        url: recipe.url,
+        is_edited: false,
+      });
+
+      await userRecipe.save();
+
+      const allRecipesCategory = await Category.findOne({ user: user_id, name: 'All Recipes' });
+      if (allRecipesCategory) {
+        allRecipesCategory.recipes.push(userRecipe._id);
+        await allRecipesCategory.save();
+      }
     }
 
     const uploadedImageUrls = await Promise.all(
       files.map(async (file) => {
-        const imageUrl = await uploadImageToS3(file.buffer);
-        return imageUrl;
+        try {
+          const imageUrl = await uploadImageToS3(file.buffer);
+          return imageUrl;
+        } catch (error) {
+          console.error('Error uploading image:', error.message);
+          throw new Error('Failed to upload image to S3');
+        }
       })
     );
 

@@ -21,15 +21,15 @@ const getCategories = async (userId) => {
 const addRecipeToCategory = async (categoryId, recipeId, userId) => {
   const category = await Category.findById(categoryId);
   if (!category) {
-    throw new Error('Category not found');
+    throw new Error(`Category ${categoryId} for user ${userId} not found`);
   }
 
-  let userRecipe = await UserRecipe.findOne({ user_id: userId, recipe_id: recipeId });
+  let userRecipe = await UserRecipe.findOne({ user_id: userId, _id: recipeId });
 
   if (!userRecipe) {
     const recipe = await Recipe.findById(recipeId);
     if (!recipe) {
-      throw new Error('Recipe not found');
+      throw new Error(`Recipe ${recipeId} for user ${userId} not found`);
     }
 
     userRecipe = new UserRecipe({
@@ -50,6 +50,12 @@ const addRecipeToCategory = async (categoryId, recipeId, userId) => {
     });
 
     await userRecipe.save();
+
+    const allRecipesCategory = await Category.findOne({ user: userId, name: 'All Recipes' });
+    if (allRecipesCategory) {
+      allRecipesCategory.recipes.push(userRecipe._id);
+      await allRecipesCategory.save();
+    }
   }
 
   category.recipes.push(userRecipe._id);
@@ -59,13 +65,45 @@ const addRecipeToCategory = async (categoryId, recipeId, userId) => {
 };
 
 const getCategoryRecipes = async (userId) => {
+  // Fetch all categories and populate their recipes
   const categories = await Category.find({ user: userId }).populate('recipes').sort({ order: 1 });
 
+  // Find the "All Recipes" category
+  const allRecipesCategory = await Category.findOne({ user: userId, name: 'All Recipes' });
+
+  if (!allRecipesCategory) {
+    throw new Error('All Recipes category not found');
+  }
+
+  // Fetch all user recipes
+  const userRecipes = await UserRecipe.find({ user_id: userId });
+
+  // Create a set of all recipe IDs that are in any category
+  const categorizedRecipeIds = new Set();
+  categories.forEach(category => {
+    category.recipes.forEach(recipe => {
+      categorizedRecipeIds.add(recipe._id.toString());
+    });
+  });
+
+  // Find recipes that are not in any category
+  const missingRecipes = userRecipes.filter(recipe => !categorizedRecipeIds.has(recipe._id.toString()));
+  if (missingRecipes.length > 0) {
+    // Only add recipes that are not already in "All Recipes" category
+    const newRecipes = missingRecipes.filter(recipe => !allRecipesCategory.recipes.includes(recipe._id));
+    allRecipesCategory.recipes.push(...newRecipes.map(recipe => recipe._id));
+    await allRecipesCategory.save();
+  }
+
+  // Re-fetch the updated categories
+  const updatedCategories = await Category.find({ user: userId }).populate('recipes').sort({ order: 1 });
+
+  // Prepare the response
   const recipes = {};
   const categoriesMap = {};
   const categoryOrder = [];
 
-  categories.forEach(category => {
+  updatedCategories.forEach(category => {
     categoriesMap[category._id] = {
       id: category._id.toString(),
       title: category.name,

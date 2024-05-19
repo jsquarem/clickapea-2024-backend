@@ -18,19 +18,29 @@ const s3Client = new S3Client({
   },
 });
 
+const downloadImage = async (url) => {
+  const response = await axios.get(url, { responseType: 'arraybuffer' });
+  return Buffer.from(response.data, 'binary');
+};
+
 const uploadImageToS3 = async (imageBuffer) => {
-  const resizedImageBuffer = await sharp(imageBuffer).resize(800, 800, { fit: 'inside' }).toBuffer();
-  const key = `upload/images/${uuidv4()}.jpg`;
+  try {
+    const resizedImageBuffer = await sharp(imageBuffer).resize(800, 800, { fit: 'inside' }).toBuffer();
+    const key = `upload/images/${uuidv4()}.jpg`;
 
-  const command = new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: key,
-    Body: resizedImageBuffer,
-    ContentType: 'image/jpeg',
-  });
+    const command = new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: key,
+      Body: resizedImageBuffer,
+      ContentType: 'image/jpeg',
+    });
 
-  await s3Client.send(command);
-  return `${process.env.AWS_ROOT_URL}/${key}`;
+    await s3Client.send(command);
+    return `${process.env.AWS_ROOT_URL}/${key}`;
+  } catch (error) {
+    console.error('Error uploading image to S3:', error.message);
+    throw new Error('Failed to upload image to S3');
+  }
 };
 
 const fetchAndProcessRecipe = async (url) => {
@@ -72,7 +82,8 @@ const createRecipe = async (url) => {
       throw new Error('Missing required recipe fields');
     }
 
-    const awsImageUrl = await uploadImageToS3(recipeData.image);
+    const imageBuffer = await downloadImage(recipeData.image);
+    const awsImageUrl = await uploadImageToS3(imageBuffer);
 
     const recipe = new Recipe({
       ...recipeData,
