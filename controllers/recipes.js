@@ -1,6 +1,10 @@
-const { createRecipe, updateUserRecipe } = require('../services/recipeService');
+const { createRecipe, updateUserRecipe, uploadImageToS3 } = require('../services/recipeService');
 const Recipe = require('../models/Recipe');
 const UserRecipe = require('../models/UserRecipe');
+const multer = require('multer');
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const addRecipe = async (req, res) => {
   const { url } = req.body;
@@ -83,6 +87,42 @@ const updateUserRecipeById = async (req, res) => {
   }
 };
 
+const uploadAdditionalImage = upload.array('images', 10);
+
+const handleUploadAdditionalImage = async (req, res) => {
+  const { id } = req.params;
+  const user_id = req.user.userId;
+  const files = req.files;
+
+  if (!files || !files.length) {
+    return res.status(400).json({ message: 'No files uploaded' });
+  }
+
+  try {
+    const userRecipe = await UserRecipe.findOne({ _id: id, user_id });
+    if (!userRecipe) {
+      return res.status(404).json({ message: 'User recipe not found' });
+    }
+
+    const uploadedImageUrls = await Promise.all(
+      files.map(async (file) => {
+        const imageUrl = await uploadImageToS3(file.buffer);
+        return imageUrl;
+      })
+    );
+
+    userRecipe.additional_images = userRecipe.additional_images
+      ? userRecipe.additional_images.concat(uploadedImageUrls)
+      : uploadedImageUrls;
+
+    await userRecipe.save();
+    res.status(200).json(userRecipe);
+  } catch (error) {
+    console.error('Error uploading additional images:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const getAllRecipes = async (req, res) => {
   try {
     const recipes = await Recipe.find().sort({ title: 1 });
@@ -99,5 +139,7 @@ module.exports = {
   addUserRecipe,
   getUserRecipeById,
   updateUserRecipeById,
-  getAllRecipes
+  uploadAdditionalImage,
+  handleUploadAdditionalImage,
+  getAllRecipes,
 };

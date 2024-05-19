@@ -18,15 +18,14 @@ const s3Client = new S3Client({
   },
 });
 
-const uploadImageToS3 = async (imageUrl) => {
-  const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-  const imageBuffer = await sharp(response.data).resize(800, 800, { fit: 'inside' }).toBuffer();
+const uploadImageToS3 = async (imageBuffer) => {
+  const resizedImageBuffer = await sharp(imageBuffer).resize(800, 800, { fit: 'inside' }).toBuffer();
   const key = `upload/images/${uuidv4()}.jpg`;
 
   const command = new PutObjectCommand({
     Bucket: process.env.S3_BUCKET_NAME,
     Key: key,
-    Body: imageBuffer,
+    Body: resizedImageBuffer,
     ContentType: 'image/jpeg',
   });
 
@@ -41,7 +40,7 @@ const fetchAndProcessRecipe = async (url) => {
     });
 
     const recipeData = apiResponse.data;
-    console.log('Fetched recipe data:', recipeData); // Debugging line
+    console.log('Fetched recipe data:', recipeData);
 
     const processedIngredients = processIngredients(recipeData.ingredients);
 
@@ -56,7 +55,7 @@ const fetchAndProcessRecipe = async (url) => {
       nutrients: recipeData.nutrients,
       image: recipeData.image,
       total_time: recipeData.total_time,
-      url: url
+      url: url,
     };
   } catch (error) {
     console.error('Error fetching and processing recipe:', error.response ? error.response.data : error.message);
@@ -67,7 +66,7 @@ const fetchAndProcessRecipe = async (url) => {
 const createRecipe = async (url) => {
   try {
     const recipeData = await fetchAndProcessRecipe(url);
-    console.log('Processed recipe data:', recipeData); // Debugging line
+    console.log('Processed recipe data:', recipeData);
 
     if (!recipeData.title || !recipeData.nutrients || !recipeData.url) {
       throw new Error('Missing required recipe fields');

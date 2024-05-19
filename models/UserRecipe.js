@@ -12,7 +12,9 @@ const userRecipeSchema = new mongoose.Schema({
   ingredients: { type: Array, required: true },
   instructions: { type: Array, required: true },
   nutrients: { type: Object, required: true },
-  image: { type: String, required: true },
+  image: { type: String },
+  original_image: { type: String },
+  additional_images: { type: Array },
   url: { type: String, required: true },
   is_edited: { type: Boolean, default: false },
 });
