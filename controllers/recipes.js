@@ -7,6 +7,19 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+const createNewRecipe = async (req, res) => {
+  const recipeData = req.body;
+  console.log('recipeData:', recipeData)
+  try {
+    // const newRecipe = new Recipe(recipeData);
+    // await newRecipe.save();
+    res.status(201).json(recipeData);
+  } catch (error) {
+    console.error('Error creating recipe:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const addRecipe = async (req, res) => {
   const { url } = req.body;
 
@@ -164,6 +177,62 @@ const handleUploadAdditionalImage = async (req, res) => {
   }
 };
 
+const uploadMainImage = upload.single('images');
+
+const handleUploadMainImage = async (req, res) => {
+  const { id } = req.params;
+  const user_id = req.user.userId;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ message: 'No file uploaded' });
+  }
+
+  try {
+    let userRecipe = await UserRecipe.findOne({ _id: id, user_id });
+    if (!userRecipe) {
+      const recipe = await Recipe.findById(id);
+      if (!recipe) {
+        return res.status(404).json({ message: 'Recipe not found' });
+      }
+
+      userRecipe = new UserRecipe({
+        user_id: user_id,
+        recipe_id: recipe._id,
+        title: recipe.title,
+        author: recipe.author,
+        equipment: recipe.equipment,
+        host: recipe.host,
+        total_time: recipe.total_time,
+        yields: recipe.yields,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        nutrients: recipe.nutrients,
+        image: recipe.image,
+        url: recipe.url,
+        is_edited: false,
+      });
+
+      await userRecipe.save();
+
+      const allRecipesCategory = await Category.findOne({ user: user_id, name: 'All Recipes' });
+      if (allRecipesCategory) {
+        allRecipesCategory.recipes.push(userRecipe._id);
+        await allRecipesCategory.save();
+      }
+    }
+
+    const imageUrl = await uploadImageToS3(file.buffer);
+    userRecipe.image = imageUrl;
+    await userRecipe.save();
+
+    res.status(200).json(userRecipe);
+  } catch (error) {
+    console.error('Error uploading main image:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const getAllRecipes = async (req, res) => {
   try {
     const recipes = await Recipe.find().sort({ title: 1 });
@@ -183,4 +252,7 @@ module.exports = {
   uploadAdditionalImage,
   handleUploadAdditionalImage,
   getAllRecipes,
+  createNewRecipe,
+  uploadMainImage,
+  handleUploadMainImage,
 };

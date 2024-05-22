@@ -8,12 +8,17 @@ const {
   uploadAdditionalImage,
   handleUploadAdditionalImage,
   getAllRecipes,
+  createNewRecipe,
+  uploadMainImage,
+  handleUploadMainImage,
 } = require('../controllers/recipes');
 const authenticateJWT = require('../middleware/authenticateJWT');
 const router = express.Router();
 
+
 router.get('/all', getAllRecipes);
 router.post('/add', addRecipe);
+router.post('/new', createNewRecipe);
 
 router.get('/:id', getRecipeById);
 
@@ -22,5 +27,6 @@ router.get('/user/:id', authenticateJWT, getUserRecipeById);
 router.put('/user/:id', authenticateJWT, updateUserRecipeById);
 
 router.post('/user/:id/images', authenticateJWT, uploadAdditionalImage, handleUploadAdditionalImage);
+router.post('/:id/uploadMainImage', authenticateJWT, uploadMainImage, handleUploadMainImage);
 
 module.exports = router;
