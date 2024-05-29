@@ -2,6 +2,7 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const axios = require('axios');
 const { processIngredients, processIngredientsForUpdate } = require('./ingredientService');
 const Recipe = require('../models/Recipe');
+const Category = require('../models/Category');
 const UserRecipe = require('../models/UserRecipe');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
@@ -45,7 +46,7 @@ const uploadImageToS3 = async (imageBuffer) => {
 
 const fetchAndProcessRecipe = async (url) => {
   try {
-    const apiResponse = await axios.get(`${process.env.SCRAPER_API_URL}`, {
+    const apiResponse = await axios.get(`${process.env.SCRAPER_API_URL}/scrape`, {
       params: { url },
     });
 
@@ -59,7 +60,7 @@ const fetchAndProcessRecipe = async (url) => {
       author: recipeData.author,
       equipment: recipeData.equipment,
       host: recipeData.host,
-      yield: recipeData.yield,
+      yield: recipeData.yields,
       ingredients: processedIngredients,
       instructions: recipeData.instructions,
       nutrients: recipeData.nutrients,
@@ -99,6 +100,74 @@ const createRecipe = async (url) => {
   }
 };
 
+const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, additionalImages) => {
+  try {
+
+    const payload = {
+      ...recipeData,
+      ingredients: JSON.parse(recipeData.ingredients),
+      equipment: JSON.parse(recipeData.equipment),
+      instructions: JSON.parse(recipeData.instructions),
+    };
+    const apiResponse = await axios.post(`${process.env.SCRAPER_API_URL}/process`, payload, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    const processedRecipeData = apiResponse.data;
+    console.log('apiResponse.data: ', apiResponse.data)
+
+    const processedIngredients = processIngredients(processedRecipeData.ingredients);
+
+    // Upload main image file
+    let awsImageUrl = [];
+    if (mainImageFile) {
+      const imageBuffer = await sharp(mainImageFile.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
+      awsImageUrl = await uploadImageToS3(imageBuffer);
+    }
+    console.log('awsImageUrl: ', awsImageUrl)
+
+    // Upload additional image files
+    let awsAdditionalImageUrls = [];
+    awsAdditionalImageUrls = await Promise.all(
+      additionalImages.map(async (image) => {
+        const imageBuffer = await sharp(image.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
+        return await uploadImageToS3(imageBuffer);
+      })
+    );
+    console.log('awsAdditionalImageUrls: ', awsAdditionalImageUrls)
+
+    const userRecipe = new UserRecipe({
+      user_id: userId,
+      title: processedRecipeData.title,
+      author: processedRecipeData.author,
+      equipment: processedRecipeData.equipment,
+      host: processedRecipeData.host,
+      yield: processedRecipeData.yields,
+      ingredients: processedIngredients,
+      instructions: processedRecipeData.instructions,
+      nutrients: processedRecipeData.nutrients,
+      image: awsImageUrl,
+      additional_images: awsAdditionalImageUrls,
+      total_time: processedRecipeData.total_time,
+      url: processedRecipeData.url,
+    });
+
+    await userRecipe.save();
+
+    const allRecipesCategory = await Category.findOne({ user: userId, name: 'All Recipes' });
+    if (allRecipesCategory) {
+      allRecipesCategory.recipes.push(userRecipe._id);
+      await allRecipesCategory.save();
+    }
+
+    return userRecipe;
+  } catch (error) {
+    console.error('Error creating user recipe from JSON:', error.message);
+    throw new Error('Failed to create user recipe from JSON');
+  }
+};
+
 const updateUserRecipe = async (id, user_id, updatedRecipeData) => {
   try {
     const processedIngredients = processIngredientsForUpdate(updatedRecipeData.ingredients);
@@ -126,4 +195,5 @@ module.exports = {
   uploadImageToS3,
   createRecipe,
   updateUserRecipe,
+  createUserRecipeFromJson,
 };

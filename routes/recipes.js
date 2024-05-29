@@ -9,6 +9,7 @@ const {
   handleUploadAdditionalImage,
   getAllRecipes,
   createNewRecipe,
+  handleCreateNewRecipe,
   uploadMainImage,
   handleUploadMainImage,
 } = require('../controllers/recipes');
@@ -18,7 +19,7 @@ const router = express.Router();
 
 router.get('/all', getAllRecipes);
 router.post('/add', addRecipe);
-router.post('/new', createNewRecipe);
+router.post('/new', authenticateJWT, createNewRecipe, handleCreateNewRecipe);
 
 router.get('/:id', getRecipeById);
 

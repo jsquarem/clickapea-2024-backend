@@ -1,4 +1,4 @@
-const { createRecipe, updateUserRecipe, uploadImageToS3 } = require('../services/recipeService');
+const { createRecipe, updateUserRecipe, uploadImageToS3, createUserRecipeFromJson } = require('../services/recipeService');
 const Recipe = require('../models/Recipe');
 const UserRecipe = require('../models/UserRecipe');
 const Category = require('../models/Category'); // Import Category model
@@ -7,13 +7,24 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-const createNewRecipe = async (req, res) => {
+const createNewRecipe = upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'additional_images', maxCount: 10 },
+]);
+
+const handleCreateNewRecipe = async (req, res) => {
   const recipeData = req.body;
-  console.log('recipeData:', recipeData)
+  const mainImageFile = req.files['image'] ? req.files['image'][0] : null;
+  const additionalImages = req.files['additional_images'] || [];
+
+  console.log('recipeData:', recipeData);
+  console.log('mainImageFile:', mainImageFile);
+  console.log('additionalImages:', additionalImages);
+
+  // return res.status(201).json(recipeData);
   try {
-    // const newRecipe = new Recipe(recipeData);
-    // await newRecipe.save();
-    res.status(201).json(recipeData);
+    const userRecipe = await createUserRecipeFromJson(recipeData, req.user.userId, mainImageFile, additionalImages);
+    res.status(201).json(userRecipe);
   } catch (error) {
     console.error('Error creating recipe:', error.message);
     res.status(500).json({ message: 'Server error' });
@@ -253,6 +264,7 @@ module.exports = {
   handleUploadAdditionalImage,
   getAllRecipes,
   createNewRecipe,
+  handleCreateNewRecipe,
   uploadMainImage,
   handleUploadMainImage,
 };

@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const userRecipeSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  recipe_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe', required: true },
+  recipe_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe' },
   title: { type: String, required: true },
   author: { type: String },
   equipment: { type: Array },
@@ -15,7 +15,7 @@ const userRecipeSchema = new mongoose.Schema({
   image: { type: String },
   original_image: { type: String },
   additional_images: { type: Array },
-  url: { type: String, required: true },
+  url: { type: String },
   is_edited: { type: Boolean, default: false },
 });
 
