@@ -100,6 +100,50 @@ const createRecipe = async (url) => {
   }
 };
 
+const createScannedRecipeFromJson = async (recipeData) => {
+  try {
+    // Preprocess the ingredients list
+    if (Array.isArray(recipeData.ingredients) && recipeData.ingredients.length > 0) {
+      recipeData.ingredients = recipeData.ingredients.map(ingredient => {
+        if (typeof ingredient === 'string') {
+          return { text: ingredient };
+        } else {
+          return ingredient;
+        }
+      });
+    }
+
+    // Ensure optional fields have default values
+    recipeData.title = recipeData.title || '';
+    recipeData.total_time = recipeData.total_time || '';
+    recipeData.yields = recipeData.yields || '';
+    recipeData.image = recipeData.image || '';
+    recipeData.host = recipeData.host || '';
+    recipeData.author = recipeData.author || '';
+    recipeData.nutrients = recipeData.nutrients || {};
+
+    const apiResponse = await axios.post(`${process.env.SCRAPER_API_URL}/process`, recipeData, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const processedRecipeData = apiResponse.data;
+    const processedIngredients = processIngredients(processedRecipeData.ingredients);
+
+    const scannedRecipe = {
+      ...processedRecipeData,
+      ingredients: processedIngredients
+    };
+
+    return scannedRecipe;
+  } catch (error) {
+    console.error('Error creating user recipe from JSON:', error.message);
+    throw new Error('Failed to create user recipe from JSON');
+  }
+};
+
+
 const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, additionalImages) => {
   try {
 
@@ -120,7 +164,7 @@ const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, addit
     const processedIngredients = processIngredients(processedRecipeData.ingredients);
 
     // Upload main image file
-    let awsImageUrl = [];
+    let awsImageUrl = '';
     if (mainImageFile) {
       const imageBuffer = await sharp(mainImageFile.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
       awsImageUrl = await uploadImageToS3(imageBuffer);
@@ -196,4 +240,5 @@ module.exports = {
   createRecipe,
   updateUserRecipe,
   createUserRecipeFromJson,
+  createScannedRecipeFromJson
 };

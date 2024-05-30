@@ -1,8 +1,10 @@
-const { createRecipe, updateUserRecipe, uploadImageToS3, createUserRecipeFromJson } = require('../services/recipeService');
+const { createRecipe, updateUserRecipe, uploadImageToS3, createUserRecipeFromJson, createScannedRecipeFromJson } = require('../services/recipeService');
 const Recipe = require('../models/Recipe');
 const UserRecipe = require('../models/UserRecipe');
 const Category = require('../models/Category'); // Import Category model
 const multer = require('multer');
+const axios = require('axios');
+const FormData = require('form-data');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
@@ -254,6 +256,41 @@ const getAllRecipes = async (req, res) => {
   }
 };
 
+const uploadScanRecipeImage = upload.single('imageFile'); // Add multer middleware
+
+const handleScanRecipe = async (req, res) => {
+  try {
+    const imageFile = req.file;
+
+    if (!imageFile) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Logging the image file for debugging purposes
+    console.log('Image File:', imageFile);
+
+    // Creating form data to send to RECIPE_OCR_API
+    const formData = new FormData();
+    formData.append('imageFile', imageFile.buffer, imageFile.originalname);
+
+    // Sending the POST request to RECIPE_OCR_API
+    const response = await axios.post(`${process.env.RECIPE_OCR_API}/scan`, formData, {
+      headers: formData.getHeaders(),
+    });
+
+    const recipeData = response.data;
+
+    const scannedRecipe = await createScannedRecipeFromJson(recipeData);
+
+    // Responding with the result from the API
+    res.status(200).json(scannedRecipe);
+  } catch (error) {
+    console.error('Error handling scan recipe:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
 module.exports = {
   addRecipe,
   getRecipeById,
@@ -267,4 +304,6 @@ module.exports = {
   handleCreateNewRecipe,
   uploadMainImage,
   handleUploadMainImage,
+  uploadScanRecipeImage,
+  handleScanRecipe,
 };
