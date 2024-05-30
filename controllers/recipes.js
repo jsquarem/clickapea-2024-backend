@@ -290,6 +290,22 @@ const handleScanRecipe = async (req, res) => {
   }
 };
 
+const deleteUserRecipeById = async (req, res) => {
+  const { id } = req.params;
+  const user_id = req.user.userId;
+
+  try {
+    const userRecipe = await UserRecipe.findOneAndDelete({ _id: id, user_id });
+    if (!userRecipe) {
+      return res.status(404).json({ message: 'User recipe not found' });
+    }
+    res.status(200).json({ message: 'User recipe deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user recipe:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 
 module.exports = {
   addRecipe,
@@ -306,4 +322,5 @@ module.exports = {
   handleUploadMainImage,
   uploadScanRecipeImage,
   handleScanRecipe,
+  deleteUserRecipeById
 };
