@@ -12,6 +12,8 @@ const {
   handleCreateNewRecipe,
   uploadMainImage,
   handleUploadMainImage,
+  uploadScanRecipeImage,
+  handleScanRecipe,
 } = require('../controllers/recipes');
 const authenticateJWT = require('../middleware/authenticateJWT');
 const router = express.Router();
@@ -29,5 +31,7 @@ router.put('/user/:id', authenticateJWT, updateUserRecipeById);
 
 router.post('/user/:id/images', authenticateJWT, uploadAdditionalImage, handleUploadAdditionalImage);
 router.post('/:id/uploadMainImage', authenticateJWT, uploadMainImage, handleUploadMainImage);
+
+router.post('/scan-recipe', authenticateJWT, uploadScanRecipeImage, handleScanRecipe);
 
 module.exports = router;
