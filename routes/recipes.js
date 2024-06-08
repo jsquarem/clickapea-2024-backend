@@ -17,11 +17,12 @@ const {
   deleteUserRecipeById,
 } = require('../controllers/recipes');
 const authenticateJWT = require('../middleware/authenticateJWT');
+const authenticateOptionalJWT = require('../middleware/authenticateOptionalJWT');
 const router = express.Router();
 
 
 router.get('/all', getAllRecipes);
-router.post('/add', addRecipe);
+router.post('/add', authenticateOptionalJWT, addRecipe);
 router.post('/new', authenticateJWT, createNewRecipe, handleCreateNewRecipe);
 
 router.get('/:id', getRecipeById);

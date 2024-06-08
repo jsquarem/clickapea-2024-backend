@@ -52,7 +52,7 @@ const addRecipeToCategory = async (categoryId, recipeId, userId) => {
     await userRecipe.save();
 
     const allRecipesCategory = await Category.findOne({ user: userId, name: 'All Recipes' });
-    if (allRecipesCategory) {
+    if (allRecipesCategory && !category) {
       allRecipesCategory.recipes.push(userRecipe._id);
       await allRecipesCategory.save();
     }

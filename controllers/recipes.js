@@ -35,9 +35,22 @@ const handleCreateNewRecipe = async (req, res) => {
 
 const addRecipe = async (req, res) => {
   const { url } = req.body;
+  const user_id = req.user?.userId; // Optional chaining to check if user is authenticated
 
   try {
     const recipe = await createRecipe(url);
+
+    if (user_id) {
+      // Add recipe to the user's "All Recipes" category
+      const allRecipesCategory = await Category.findOne({ user: user_id, name: 'All Recipes' });
+      if (allRecipesCategory) {
+        allRecipesCategory.recipes.push(recipe._id);
+        await allRecipesCategory.save();
+      } else {
+        console.error('All Recipes category not found for user:', user_id);
+      }
+    }
+
     res.status(200).json(recipe);
   } catch (error) {
     console.error('Error adding recipe:', error.response ? error.response.data : error.message);
