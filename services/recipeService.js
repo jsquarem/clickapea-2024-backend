@@ -64,7 +64,7 @@ const fetchAndProcessRecipe = async (url) => {
       ingredients: processedIngredients,
       instructions: recipeData.instructions,
       nutrients: recipeData.nutrients,
-      image: recipeData.image,
+      images: recipeData.images,
       total_time: recipeData.total_time,
       url: url,
     };
@@ -83,13 +83,16 @@ const createRecipe = async (url) => {
       throw new Error('Missing required recipe fields');
     }
 
-    const imageBuffer = await downloadImage(recipeData.image);
-    const awsImageUrl = await uploadImageToS3(imageBuffer);
+     const awsImages = await Promise.all(recipeData.images.map(async (image) => {
+      const imageBuffer = await downloadImage(image);
+      const awsImageUrl = await uploadImageToS3(imageBuffer);
+      return awsImageUrl;
+    }));
 
     const recipe = new Recipe({
       ...recipeData,
-      image: awsImageUrl,
-      original_image: recipeData.image,
+      images: awsImages,
+      original_image: awsImages[0],
     });
 
     await recipe.save();
@@ -117,7 +120,7 @@ const createScannedRecipeFromJson = async (recipeData) => {
     recipeData.title = recipeData.title || '';
     recipeData.total_time = recipeData.total_time || '';
     recipeData.yields = recipeData.yields || '';
-    recipeData.image = recipeData.image || '';
+    recipeData.images = recipeData.images || '';
     recipeData.host = recipeData.host || '';
     recipeData.author = recipeData.author || '';
     recipeData.nutrients = recipeData.nutrients || {};
@@ -144,7 +147,7 @@ const createScannedRecipeFromJson = async (recipeData) => {
 };
 
 
-const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, additionalImages) => {
+const createUserRecipeFromJson = async (recipeData, userId, images) => {
   try {
 
     const payload = {
@@ -164,22 +167,15 @@ const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, addit
     const processedIngredients = processIngredients(processedRecipeData.ingredients);
 
     // Upload main image file
-    let awsImageUrl = '';
-    if (mainImageFile) {
-      const imageBuffer = await sharp(mainImageFile.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
-      awsImageUrl = await uploadImageToS3(imageBuffer);
+    let awsImages = [];
+    if (images.length > 0) {
+        awsImages = await Promise.all(images.map(async (image) => {
+        const awsImageUrl = await uploadImageToS3(image.buffer);
+        return awsImageUrl;
+        }));
     }
-    console.log('awsImageUrl: ', awsImageUrl)
+    console.log('awsImages: ', awsImages)
 
-    // Upload additional image files
-    let awsAdditionalImageUrls = [];
-    awsAdditionalImageUrls = await Promise.all(
-      additionalImages.map(async (image) => {
-        const imageBuffer = await sharp(image.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
-        return await uploadImageToS3(imageBuffer);
-      })
-    );
-    console.log('awsAdditionalImageUrls: ', awsAdditionalImageUrls)
 
     const userRecipe = new UserRecipe({
       user_id: userId,
@@ -191,8 +187,7 @@ const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, addit
       ingredients: processedIngredients,
       instructions: processedRecipeData.instructions,
       nutrients: processedRecipeData.nutrients,
-      image: awsImageUrl,
-      additional_images: awsAdditionalImageUrls,
+      images: awsImages,
       total_time: processedRecipeData.total_time,
       url: processedRecipeData.url,
     });

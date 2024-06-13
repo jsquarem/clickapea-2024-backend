@@ -10,7 +10,7 @@ const recipeSchema = new mongoose.Schema({
   ingredients: { type: Array, required: true },
   instructions: { type: Array, required: true },
   nutrients: { type: Object, required: true },
-  image: { type: String },
+  images: { type: [String] },
   original_image: { type: String },
   url: { type: String, required: true }
 });

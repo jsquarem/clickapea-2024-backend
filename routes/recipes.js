@@ -5,13 +5,11 @@ const {
   addUserRecipe,
   getUserRecipeById,
   updateUserRecipeById,
-  uploadAdditionalImage,
-  handleUploadAdditionalImage,
+  uploadRecipeImages,
+  handleUploadRecipeImages,
   getAllRecipes,
   createNewRecipe,
   handleCreateNewRecipe,
-  uploadMainImage,
-  handleUploadMainImage,
   uploadScanRecipeImage,
   handleScanRecipe,
   deleteUserRecipeById,
@@ -34,8 +32,8 @@ router.get('/user/:id', authenticateJWT, getUserRecipeById);
 router.put('/user/:id', authenticateJWT, updateUserRecipeById);
 router.delete('/user/:id', authenticateJWT, deleteUserRecipeById);
 
-router.post('/user/:id/images', authenticateJWT, uploadAdditionalImage, handleUploadAdditionalImage);
-router.post('/:id/uploadMainImage', authenticateJWT, uploadMainImage, handleUploadMainImage);
+// router.post('/user/:id/images', authenticateJWT, uploadRecipeImages, handleUploadRecipeImages);
+// router.post('/:id/uploadMainImage', authenticateJWT, uploadMainImage, handleUploadMainImage);
 
 router.post('/scan-recipe', authenticateJWT, uploadScanRecipeImage, handleScanRecipe);
 

@@ -6,13 +6,23 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // CORS configuration
-const corsOptions = {
-  origin: `${process.env.REACT_FRONTEND_URL}`, // Replace with your frontend URL
-  optionsSuccessStatus: 200,
-};
+const allowedOrigins = [process.env.REACT_FRONTEND_URL];
+
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push(process.env.REACT_FRONTEND_ALIAS);
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 
 // Middleware
-app.use(cors(corsOptions));
 app.use(express.json());
 
 // Database connection
