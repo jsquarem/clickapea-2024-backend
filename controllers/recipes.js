@@ -16,16 +16,14 @@ const createNewRecipe = upload.fields([
 
 const handleCreateNewRecipe = async (req, res) => {
   const recipeData = req.body;
-  const mainImageFile = req.files['image'] ? req.files['image'][0] : null;
-  const additionalImages = req.files['additional_images'] || [];
+  const imageFiles = req.files['images'] ? req.files['images'] : [];
 
   console.log('recipeData:', recipeData);
-  console.log('mainImageFile:', mainImageFile);
-  console.log('additionalImages:', additionalImages);
+  console.log('imageFiles:', imageFiles);
 
   // return res.status(201).json(recipeData);
   try {
-    const userRecipe = await createUserRecipeFromJson(recipeData, req.user.userId, mainImageFile, additionalImages);
+    const userRecipe = await createUserRecipeFromJson(recipeData, req.user.userId, imageFiles);
     res.status(201).json(userRecipe);
   } catch (error) {
     console.error('Error creating recipe:', error.message);
@@ -85,7 +83,7 @@ const addUserRecipe = async (req, res) => {
 
     const userRecipe = new UserRecipe({
       user_id,
-      recipe_id: recipe._id,
+      original_recipe_id: recipe._id,
       ...recipe.toObject(),
     });
     await userRecipe.save();
@@ -109,7 +107,7 @@ const getUserRecipeById = async (req, res) => {
   console.log('Finding recipe:', id, 'for user:', user_id);
 
   try {
-    const userRecipe = await UserRecipe.findOne({ _id: id, user_id }).populate('recipe_id');
+    const userRecipe = await UserRecipe.findOne({ _id: id, user_id }).populate('original_recipe_id');
     if (!userRecipe) {
       return res.status(404).json({ message: 'User recipe not found' });
     }
@@ -134,9 +132,9 @@ const updateUserRecipeById = async (req, res) => {
   }
 };
 
-const uploadAdditionalImage = upload.array('images', 10);
+const uploadRecipeImages = upload.array('images', 10);
 
-const handleUploadAdditionalImage = async (req, res) => {
+const handleUploadRecipeImages = async (req, res) => {
   const { id } = req.params;
   const user_id = req.user.userId;
   const files = req.files;
@@ -149,13 +147,14 @@ const handleUploadAdditionalImage = async (req, res) => {
     let userRecipe = await UserRecipe.findOne({ _id: id, user_id });
     if (!userRecipe) {
       const recipe = await Recipe.findById(id);
+      console.log(recipe);
       if (!recipe) {
         return res.status(404).json({ message: 'Recipe not found' });
       }
 
       userRecipe = new UserRecipe({
         user_id: user_id,
-        recipe_id: recipe._id,
+        original_recipe_id: recipe._id,
         title: recipe.title,
         author: recipe.author,
         equipment: recipe.equipment,
@@ -165,7 +164,7 @@ const handleUploadAdditionalImage = async (req, res) => {
         ingredients: recipe.ingredients,
         instructions: recipe.instructions,
         nutrients: recipe.nutrients,
-        image: recipe.image,
+        images: recipe.images,
         url: recipe.url,
         is_edited: false,
       });
@@ -191,8 +190,8 @@ const handleUploadAdditionalImage = async (req, res) => {
       })
     );
 
-    userRecipe.additional_images = userRecipe.additional_images
-      ? userRecipe.additional_images.concat(uploadedImageUrls)
+    userRecipe.images = userRecipe.images && userRecipe.images.length > 0
+      ? userRecipe.images.concat(uploadedImageUrls)
       : uploadedImageUrls;
 
     await userRecipe.save();
@@ -203,61 +202,61 @@ const handleUploadAdditionalImage = async (req, res) => {
   }
 };
 
-const uploadMainImage = upload.single('images');
+// const uploadMainImage = upload.array('images', 10);
 
-const handleUploadMainImage = async (req, res) => {
-  const { id } = req.params;
-  const user_id = req.user.userId;
-  const file = req.file;
+// const handleUploadMainImage = async (req, res) => {
+//   const { id } = req.params;
+//   const user_id = req.user.userId;
+//   const file = req.file;
 
-  if (!file) {
-    return res.status(400).json({ message: 'No file uploaded' });
-  }
+//   if (!file) {
+//     return res.status(400).json({ message: 'No file uploaded' });
+//   }
 
-  try {
-    let userRecipe = await UserRecipe.findOne({ _id: id, user_id });
-    if (!userRecipe) {
-      const recipe = await Recipe.findById(id);
-      if (!recipe) {
-        return res.status(404).json({ message: 'Recipe not found' });
-      }
+//   try {
+//     let userRecipe = await UserRecipe.findOne({ _id: id, user_id });
+//     if (!userRecipe) {
+//       const recipe = await Recipe.findById(id);
+//       if (!recipe) {
+//         return res.status(404).json({ message: 'Recipe not found' });
+//       }
 
-      userRecipe = new UserRecipe({
-        user_id: user_id,
-        recipe_id: recipe._id,
-        title: recipe.title,
-        author: recipe.author,
-        equipment: recipe.equipment,
-        host: recipe.host,
-        total_time: recipe.total_time,
-        yields: recipe.yields,
-        ingredients: recipe.ingredients,
-        instructions: recipe.instructions,
-        nutrients: recipe.nutrients,
-        image: recipe.image,
-        url: recipe.url,
-        is_edited: false,
-      });
+//       userRecipe = new UserRecipe({
+//         user_id: user_id,
+//         recipe_id: recipe._id,
+//         title: recipe.title,
+//         author: recipe.author,
+//         equipment: recipe.equipment,
+//         host: recipe.host,
+//         total_time: recipe.total_time,
+//         yields: recipe.yields,
+//         ingredients: recipe.ingredients,
+//         instructions: recipe.instructions,
+//         nutrients: recipe.nutrients,
+//         images: recipe.images,
+//         url: recipe.url,
+//         is_edited: false,
+//       });
 
-      await userRecipe.save();
+//       await userRecipe.save();
 
-      const allRecipesCategory = await Category.findOne({ user: user_id, name: 'All Recipes' });
-      if (allRecipesCategory) {
-        allRecipesCategory.recipes.push(userRecipe._id);
-        await allRecipesCategory.save();
-      }
-    }
+//       const allRecipesCategory = await Category.findOne({ user: user_id, name: 'All Recipes' });
+//       if (allRecipesCategory) {
+//         allRecipesCategory.recipes.push(userRecipe._id);
+//         await allRecipesCategory.save();
+//       }
+//     }
 
-    const imageUrl = await uploadImageToS3(file.buffer);
-    userRecipe.image = imageUrl;
-    await userRecipe.save();
+//     const imageUrl = await uploadImageToS3(file.buffer);
+//     userRecipe.image = imageUrl;
+//     await userRecipe.save();
 
-    res.status(200).json(userRecipe);
-  } catch (error) {
-    console.error('Error uploading main image:', error.message);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+//     res.status(200).json(userRecipe);
+//   } catch (error) {
+//     console.error('Error uploading main image:', error.message);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// };
 
 const getAllRecipes = async (req, res) => {
   try {
@@ -326,13 +325,11 @@ module.exports = {
   addUserRecipe,
   getUserRecipeById,
   updateUserRecipeById,
-  uploadAdditionalImage,
-  handleUploadAdditionalImage,
+  uploadRecipeImages,
+  handleUploadRecipeImages,
   getAllRecipes,
   createNewRecipe,
   handleCreateNewRecipe,
-  uploadMainImage,
-  handleUploadMainImage,
   uploadScanRecipeImage,
   handleScanRecipe,
   deleteUserRecipeById

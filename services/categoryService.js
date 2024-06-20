@@ -34,7 +34,7 @@ const addRecipeToCategory = async (categoryId, recipeId, userId) => {
 
     userRecipe = new UserRecipe({
       user_id: userId,
-      recipe_id: recipe._id,
+      original_recipe_id: recipe._id,
       title: recipe.title,
       author: recipe.author,
       equipment: recipe.equipment,
@@ -44,7 +44,7 @@ const addRecipeToCategory = async (categoryId, recipeId, userId) => {
       ingredients: recipe.ingredients,
       instructions: recipe.instructions,
       nutrients: recipe.nutrients,
-      image: recipe.image,
+      images: recipe.images,
       url: recipe.url,
       is_edited: false
     });
@@ -116,7 +116,7 @@ const getCategoryRecipes = async (userId) => {
       recipes[recipe._id] = {
         id: recipe._id.toString(),
         content: recipe.title,
-        image: recipe.image
+        images: recipe.images
       };
     });
   });

@@ -51,21 +51,35 @@ const fetchAndProcessRecipe = async (url) => {
     });
 
     const recipeData = apiResponse.data;
-    console.log('Fetched recipe data:', recipeData);
+    console.log('Fetched recipe data:', JSON.stringify(recipeData));
 
     const processedIngredients = processIngredients(recipeData.ingredients);
 
     return {
       title: recipeData.title,
-      author: recipeData.author,
-      equipment: recipeData.equipment,
-      host: recipeData.host,
-      yield: recipeData.yields,
+      description: recipeData.description,
+      total_time: recipeData.total_time,
+      prep_time: recipeData.prep_time,
+      cook_time: recipeData.cook_time,
+      yields: recipeData.yields,
+      images: recipeData.images,
+      nutrients: recipeData.nutrients,
       ingredients: processedIngredients,
       instructions: recipeData.instructions,
-      nutrients: recipeData.nutrients,
-      image: recipeData.image,
-      total_time: recipeData.total_time,
+      ratings: recipeData.ratings,
+      equipment: recipeData.equipment,
+      author: recipeData.author,
+      host: recipeData.host,
+      reviews: recipeData.reviews,
+      meal_type: recipeData.meal_type,
+      ratings_count: recipeData.ratings_count,
+      keywords: recipeData.keywords,
+      dietary_restrictions: recipeData.dietary_restrictions,
+      cooking_method: recipeData.cooking_method,
+      canonical_url: recipeData.canonical_url,
+      language: recipeData.language,
+      ingredient_groups: recipeData.ingredient_groups,
+      original_image: recipeData.original_image,
       url: url,
     };
   } catch (error) {
@@ -83,13 +97,16 @@ const createRecipe = async (url) => {
       throw new Error('Missing required recipe fields');
     }
 
-    const imageBuffer = await downloadImage(recipeData.image);
-    const awsImageUrl = await uploadImageToS3(imageBuffer);
+     const awsImages = await Promise.all(recipeData.images.map(async (image) => {
+      const imageBuffer = await downloadImage(image);
+      const awsImageUrl = await uploadImageToS3(imageBuffer);
+      return awsImageUrl;
+    }));
 
     const recipe = new Recipe({
       ...recipeData,
-      image: awsImageUrl,
-      original_image: recipeData.image,
+      images: awsImages,
+      original_image: awsImages[0],
     });
 
     await recipe.save();
@@ -101,6 +118,7 @@ const createRecipe = async (url) => {
 };
 
 const createScannedRecipeFromJson = async (recipeData) => {
+  console.log('recipeData: ', recipeData)
   try {
     // Preprocess the ingredients list
     if (Array.isArray(recipeData.ingredients) && recipeData.ingredients.length > 0) {
@@ -115,12 +133,30 @@ const createScannedRecipeFromJson = async (recipeData) => {
 
     // Ensure optional fields have default values
     recipeData.title = recipeData.title || '';
-    recipeData.total_time = recipeData.total_time || '';
+    recipeData.description = recipeData.description || '';
+    recipeData.total_time = recipeData.total_time || 0;
+    recipeData.prep_time = recipeData.prep_time || 0;
+    recipeData.cook_time = recipeData.cook_time || 0;
     recipeData.yields = recipeData.yields || '';
-    recipeData.image = recipeData.image || '';
-    recipeData.host = recipeData.host || '';
-    recipeData.author = recipeData.author || '';
+    recipeData.images = recipeData.images || [];
     recipeData.nutrients = recipeData.nutrients || {};
+    recipeData.ingredients = recipeData.ingredients || [];
+    recipeData.instructions = recipeData.instructions || [];
+    recipeData.ratings = recipeData.ratings || 0;
+    recipeData.equipment = recipeData.equipment || [];
+    recipeData.author = recipeData.author || '';
+    recipeData.host = recipeData.host || '';
+    recipeData.reviews = recipeData.reviews || [];
+    recipeData.meal_type = recipeData.meal_type || [];
+    recipeData.ratings_count = recipeData.ratings_count || 0;
+    recipeData.keywords = recipeData.keywords || [];
+    recipeData.dietary_restrictions = recipeData.dietary_restrictions || [];
+    recipeData.cooking_method = recipeData.cooking_method || '';
+    recipeData.canonical_url = recipeData.canonical_url || '';
+    recipeData.language = recipeData.language || '';
+    recipeData.ingredient_groups = recipeData.ingredient_groups || [];
+    recipeData.original_image = recipeData.original_image || '';
+    recipeData.url = recipeData.url || '';
 
     const apiResponse = await axios.post(`${process.env.SCRAPER_API_URL}/process`, recipeData, {
       headers: {
@@ -138,13 +174,13 @@ const createScannedRecipeFromJson = async (recipeData) => {
 
     return scannedRecipe;
   } catch (error) {
-    console.error('Error creating user recipe from JSON:', error.message);
+    console.error('Error creating scanned user recipe from JSON:', error.message);
     throw new Error('Failed to create user recipe from JSON');
   }
 };
 
 
-const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, additionalImages) => {
+const createUserRecipeFromJson = async (recipeData, userId, images) => {
   try {
 
     const payload = {
@@ -164,37 +200,42 @@ const createUserRecipeFromJson = async (recipeData, userId, mainImageFile, addit
     const processedIngredients = processIngredients(processedRecipeData.ingredients);
 
     // Upload main image file
-    let awsImageUrl = '';
-    if (mainImageFile) {
-      const imageBuffer = await sharp(mainImageFile.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
-      awsImageUrl = await uploadImageToS3(imageBuffer);
+    let awsImages = [];
+    if (images.length > 0) {
+        awsImages = await Promise.all(images.map(async (image) => {
+        const awsImageUrl = await uploadImageToS3(image.buffer);
+        return awsImageUrl;
+        }));
     }
-    console.log('awsImageUrl: ', awsImageUrl)
+    console.log('awsImages: ', awsImages)
 
-    // Upload additional image files
-    let awsAdditionalImageUrls = [];
-    awsAdditionalImageUrls = await Promise.all(
-      additionalImages.map(async (image) => {
-        const imageBuffer = await sharp(image.buffer).resize(800, 800, { fit: 'inside' }).toBuffer();
-        return await uploadImageToS3(imageBuffer);
-      })
-    );
-    console.log('awsAdditionalImageUrls: ', awsAdditionalImageUrls)
-
-    const userRecipe = new UserRecipe({
+        const userRecipe = new UserRecipe({
       user_id: userId,
       title: processedRecipeData.title,
-      author: processedRecipeData.author,
-      equipment: processedRecipeData.equipment,
-      host: processedRecipeData.host,
-      yield: processedRecipeData.yields,
+      description: processedRecipeData.description,
+      total_time: processedRecipeData.total_time,
+      prep_time: processedRecipeData.prep_time,
+      cook_time: processedRecipeData.cook_time,
+      yields: processedRecipeData.yields,
+      images: awsImages,
+      nutrients: processedRecipeData.nutrients,
       ingredients: processedIngredients,
       instructions: processedRecipeData.instructions,
-      nutrients: processedRecipeData.nutrients,
-      image: awsImageUrl,
-      additional_images: awsAdditionalImageUrls,
-      total_time: processedRecipeData.total_time,
-      url: processedRecipeData.url,
+      ratings: processedRecipeData.ratings,
+      equipment: processedRecipeData.equipment,
+      author: processedRecipeData.author,
+      host: processedRecipeData.host,
+      reviews: processedRecipeData.reviews,
+      meal_type: processedRecipeData.meal_type,
+      ratings_count: processedRecipeData.ratings_count,
+      keywords: processedRecipeData.keywords,
+      dietary_restrictions: processedRecipeData.dietary_restrictions,
+      cooking_method: processedRecipeData.cooking_method,
+      canonical_url: processedRecipeData.canonical_url,
+      language: processedRecipeData.language,
+      ingredient_groups: processedRecipeData.ingredient_groups,
+      original_image: processedRecipeData.original_image,
+      url: processedRecipeData.url
     });
 
     await userRecipe.save();
