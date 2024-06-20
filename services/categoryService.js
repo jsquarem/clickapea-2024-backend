@@ -116,7 +116,7 @@ const getCategoryRecipes = async (userId) => {
       recipes[recipe._id] = {
         id: recipe._id.toString(),
         content: recipe.title,
-        image: recipe.image
+        images: recipe.images
       };
     });
   });

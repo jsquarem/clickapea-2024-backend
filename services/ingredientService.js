@@ -1,4 +1,5 @@
-const { isImperialUnit, isMetricUnit, convertToImperial, convertToMetric, roundToFraction } = require('../lib/units');
+const { isImperialUnit, isMetricUnit, convert, roundToFraction, imperialDictionary, metricDictionary } = require('../utils/units');
+const logger = require('../utils/logger');
 
 const processIngredients = (ingredients) => {
   return ingredients.map(ingredient => {
@@ -7,19 +8,42 @@ const processIngredients = (ingredients) => {
     let other = null;
 
     ingredient.amount.forEach(amount => {
-      if (isMetricUnit(amount.unit)) {
-        metric = { quantity: Math.round(amount.quantity), unit: amount.unit };
-      } else if (isImperialUnit(amount.unit)) {
-        imperial = { quantity: roundToFraction(amount.quantity), unit: amount.unit };
+      let unit = amount.unit.toLowerCase();
+      let quantity = amount.quantity;
+      logger.error(`Converting - ${JSON.stringify(amount)}`);
+
+      // Extract unit from quantity if not present separately
+      if (!unit) {
+        const unitMatch = (typeof quantity === 'string' ? Object.keys(imperialDictionary).find(u => quantity.toLowerCase().includes(u)) : undefined) ||
+                          (typeof quantity === 'string' ? Object.keys(metricDictionary).find(u => quantity.toLowerCase().includes(u)) : undefined);
+        if (unitMatch) {
+          unit = unitMatch.toLowerCase();
+          quantity = parseFloat(quantity.replace(unitMatch, '').trim());
+        }
+      }
+logger.error(`Converted ${JSON.stringify({unit, quantity})}`);
+      console.log(unit,'<-unit1');
+      console.log(quantity,'<-quantity1');
+      // console.log(imperialDictionary[unit].normalized_unit,'<-imperialDictionary[unit].normalized_unit');
+      // console.log(imperialDictionary[unit].normalized_unit,'<-imperialDictionary[unit].normalized_unit');
+
+      if (unit && isMetricUnit(unit)) {
+        metric = { quantity: Math.round(quantity), unit: metricDictionary[unit].normalized_unit };
+      } else if (unit && isImperialUnit(unit)) {
+        imperial = { quantity: roundToFraction(quantity), unit: imperialDictionary[unit].normalized_unit };
       } else {
-        other = { quantity: amount.quantity, unit: amount.unit };
+        other = { quantity: quantity, unit: unit };
       }
     });
 
+    console.log(metric,'<-metric1');
+    console.log(imperial,'<-imperial1');
+    // console.log(imperialDictionary[imperial.unit],'<-imperialDictionary[imperial.unit]1');
+
     if (!imperial && metric) {
-      imperial = convertToImperial(metric.quantity, metric.unit);
+      imperial = convert(metricDictionary[metric.unit], metric.quantity);
     } else if (!metric && imperial) {
-      metric = convertToMetric(imperial.quantity, imperial.unit);
+      metric = convert(imperialDictionary[imperial.unit], imperial.quantity);
     }
 
     return {
@@ -48,9 +72,9 @@ const processIngredientsForUpdate = (ingredients) => {
     }
 
     if (!imperial && metric) {
-      imperial = convertToImperial(metric.quantity, metric.unit);
+      imperial = convert(imperialDictionary, metric.quantity, metric.unit);
     } else if (!metric && imperial) {
-      metric = convertToMetric(imperial.quantity, imperial.unit);
+      metric = convert(metricDictionary, imperial.quantity, imperial.unit);
     }
 
     return {
